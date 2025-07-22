@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>룰렛 게임</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            text-align: center;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+            box-sizing: border-box;
+        }
+
+        .loading {
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .loading-spinner {
+            font-size: 18px;
+            color: #666;
+            margin-top: 20px;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .input-section {
+            margin-bottom: 20px;
+        }
+
+        .input-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .player-input {
+            padding: 12px 8px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            width: 100%;
+            box-sizing: border-box;
+            min-height: 44px;
+        }
+
+        .player-input:focus {
+            outline: none;
+            border-color: #2196f3;
+            box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+        }
+
+        .canvas-container {
+            position: relative;
+            display: inline-block;
+            margin: 20px 0;
+        }
+
+        canvas {
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            max-width: 100%;
+            height: auto;
+        }
+
+        button {
+            padding: 12px 20px;
+            margin: 8px 4px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            min-height: 44px;
+            min-width: 120px;
+        }
+
+        .update-button {
+            background-color: #2196f3;
+            color: white;
+        }
+
+        .update-button:hover {
+            background-color: #1976d2;
+            transform: translateY(-1px);
+        }
+
+        .spin-button {
+            background-color: #4caf50;
+            color: white;
+            font-size: 18px;
+            padding: 15px 30px;
+        }
+
+        .spin-button:hover:not(:disabled) {
+            background-color: #45a049;
+            transform: translateY(-1px);
+        }
+
+        .spin-button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .rigged-button {
+            width: 50px;
+            height: 50px;
+            opacity: 0;
+            position: absolute;
+            font-size: 14px;
+            padding: 8px 12px;
+            min-width: auto;
+            min-height: auto;
+            border-radius: 50%;
+        }
+
+        .result {
+            margin-top: 20px;
+            font-size: clamp(18px, 5vw, 24px);
+            font-weight: bold;
+            color: #333;
+            animation: fadeIn 0.5s ease-in;
+            padding: 15px;
+            background: linear-gradient(135deg, #ffeaa7, #fab1a0);
+            border-radius: 10px;
+            border: 2px solid #e17055;
+            display: none;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: clamp(24px, 6vw, 32px);
+        }
+
+        h3 {
+            color: #666;
+            margin-bottom: 15px;
+            font-size: clamp(16px, 4vw, 20px);
+        }
+
+        /* 반응형 미디어 쿼리들 */
+        @media (max-width: 480px) {
+            .container {
+                padding: 15px;
+                margin: 10px;
+                border-radius: 8px;
+            }
+
+            .input-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+
+            .player-input {
+                font-size: 16px;
+            }
+
+            button {
+                margin: 6px 2px;
+                padding: 12px 16px;
+            }
+
+            .spin-button {
+                width: 100%;
+                max-width: 280px;
+            }
+
+            .rigged-button {
+                right: 2px;
+                font-size: 12px;
+                padding: 6px 10px;
+            }
+
+            .result {
+                margin: 15px -5px 0;
+                padding: 12px;
+            }
+        }
+
+        @media (min-width: 481px) and (max-width: 768px) {
+            .container {
+                padding: 25px;
+            }
+
+            .input-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-height: 600px) and (orientation: landscape) {
+            .container {
+                padding: 10px;
+            }
+
+            h1 {
+                margin-bottom: 10px;
+            }
+
+            .input-section {
+                margin-bottom: 15px;
+            }
+
+            .canvas-container {
+                margin: 15px 0;
+            }
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 480px) {
+            .button-container {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .spin-button,
+            .rigged-button {
+                width: 100%;
+                max-width: 280px;
+            }
+        }
+
+        /* 다크모드 지원 */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            }
+
+            .container {
+                background: #2c3e50;
+                color: white;
+            }
+
+            h1,
+            h3 {
+                color: #ecf0f1;
+            }
+
+            .player-input {
+                background: #34495e;
+                border-color: #4a5f7a;
+                color: white;
+            }
+
+            .player-input:focus {
+                border-color: #3498db;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container" id="app">
+        <h1>🎯 룰렛 게임</h1>
+
+        <div class="input-section">
+            <h3>참가자 이름 입력</h3>
+            <div class="input-grid" id="inputGrid">
+                <!-- JavaScript로 동적 생성 -->
+            </div>
+        </div>
+
+        <button class="update-button" onclick="updatePlayers()" type="button">
+            📝 참가자 업데이트
+        </button>
+
+        <div class="canvas-container">
+            <canvas id="rouletteCanvas"></canvas>
+
+        </div>
+
+        <div class="button-container">
+            <button class="spin-button" id="spinButton" onclick="handleNormalSpin()" type="button">
+                🎲 룰렛 돌리기
+            </button>
+            <button class="rigged-button" onclick="handleRiggedSpin()" type="button" title="특별 모드">
+                ⭐ 특별
+            </button>
+        </div>
+
+
+        <div class="result" id="result" role="alert" aria-live="polite"></div>
+    </div>
+
+    <script>
+        /**
+         * 전역 변수들 (TypeScript 타입 정의를 JavaScript 주석으로 변환)
+         */
+
+        // HTMLCanvasElement
+        let canvas = null;
+        // CanvasRenderingContext2D | null
+        let ctx = null;
+        // Player[]
+        let players = [];
+        // number
+        let currentRotation = 0;
+        // boolean
+        let isSpinning = false;
+        // string
+        let result = '';
+        // boolean
+        let mounted = false;
+
+        // RouletteConfig
+        let config = {
+            canvasSize: 300,
+            centerX: 150,
+            centerY: 150,
+            radius: 120
+        };
+
+        // string[]
+        let playerInputs = ['홍길동', '김철수', '이영희', '박민수'];
+
+        // 상수들
+        const MAX_PLAYERS = 8;
+        const MIN_PLAYERS = 1;
+        const DEFAULT_ANIMATION_DURATION = 5000;
+        const RIGGED_NAMES = ['진혁', '동하'];
+
+        // 색상 팔레트
+        const COLOR_PALETTE = [
+            '#FF6B6B',
+            '#4ECDC4',
+            '#45B7D1',
+            '#FFA07A',
+            '#98D8C8',
+            '#F7DC6F',
+            '#BB8FCE',
+            '#85C1E2'
+        ];
+
+        /**
+         * 브라우저 환경에서만 window 객체 사용
+         * @returns {number}
+         */
+        function getWindowWidth() {
+            if (!mounted) return 400; // 기본값 반환
+            return window.innerWidth;
+        }
+
+        /**
+         * 화면 크기 감지 함수
+         * @returns {'mobile' | 'tablet' | 'desktop'}
+         */
+        function getScreenSize() {
+            const screenWidth = getWindowWidth();
+
+            if (screenWidth < 480) return 'mobile';
+            if (screenWidth < 768) return 'tablet';
+            return 'desktop';
+        }
+
+        /**
+         * 화면 크기에 따른 캔버스 크기 조정
+         */
+        function updateCanvasSize() {
+            if (!mounted) return;
+
+            const screenSize = getScreenSize();
+            const screenWidth = getWindowWidth();
+
+            switch (screenSize) {
+                case 'mobile':
+                    config.canvasSize = Math.min(screenWidth - 40, 280);
+                    break;
+                case 'tablet':
+                    config.canvasSize = 350;
+                    break;
+                case 'desktop':
+                    config.canvasSize = 400;
+                    break;
+            }
+
+            config.centerX = config.canvasSize / 2;
+            config.centerY = config.canvasSize / 2;
+            config.radius = config.canvasSize * 0.35;
+
+            if (canvas && ctx) {
+                canvas.width = config.canvasSize;
+                canvas.height = config.canvasSize;
+                drawWheel();
+            }
+        }
+
+        /**
+         * 참가자 배열 생성 함수
+         * @param {string[]} inputs 
+         * @returns {Player[]}
+         */
+        function createPlayers(inputs) {
+            const validPlayers = [];
+
+            inputs.forEach((name, index) => {
+                const trimmedName = name.trim();
+                if (trimmedName && index < MAX_PLAYERS) {
+                    const player = {
+                        id: `player-${index}-${Date.now()}`,
+                        name: trimmedName,
+                        color: COLOR_PALETTE[index] || COLOR_PALETTE[0],
+                        index: validPlayers.length
+                    };
+                    validPlayers.push(player);
+                }
+            });
+
+            return validPlayers;
+        }
+
+        /**
+         * 입력 필드 생성
+         */
+        function createInputFields() {
+            const inputGrid = document.getElementById('inputGrid');
+            inputGrid.innerHTML = '';
+
+            for (let i = 0; i < MAX_PLAYERS; i++) {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'player-input';
+                input.placeholder = `참가자 ${i + 1}`;
+                input.maxLength = 10;
+                input.value = playerInputs[i] || '';
+
+                // 입력 이벤트 리스너
+                input.addEventListener('input', (e) => {
+                    playerInputs[i] = e.target.value;
+                });
+
+                inputGrid.appendChild(input);
+            }
+        }
+
+        /**
+         * 참가자 정보 업데이트 함수
+         */
+        function updatePlayers() {
+            // 현재 입력 필드 값들을 playerInputs 배열에 반영
+            const inputs = document.querySelectorAll('.player-input');
+            inputs.forEach((input, index) => {
+                playerInputs[index] = input.value;
+            });
+
+            players = createPlayers(playerInputs);
+
+            if (players.length < MIN_PLAYERS) {
+                alert(`최소 ${MIN_PLAYERS}명의 참가자를 입력해주세요.`);
+                return;
+            }
+
+            currentRotation = 0;
+            hideResult();
+            if (mounted) {
+                drawWheel();
+            }
+
+            console.log(`참가자 ${players.length}명 업데이트 완료:`, players.map(p => p.name));
+        }
+
+        /**
+         * 텍스트 길이에 따른 표시 텍스트 생성
+         * @param {string} text 
+         * @param {number} maxLength 
+         * @returns {string}
+         */
+        function getDisplayText(text, maxLength = 6) {
+            if (text.length <= maxLength) return text;
+            return text.substring(0, maxLength - 1) + '…';
+        }
+
+        /**
+         * 반응형 폰트 크기 계산
+         * @returns {number}
+         */
+        function calculateFontSize() {
+            return Math.max(12, config.canvasSize * 0.04);
+        }
+
+        /**
+         * 룰렛 휠 그리기 함수
+         */
+        function drawWheel() {
+            if (!ctx || players.length === 0 || !mounted) return;
+
+            ctx.clearRect(0, 0, config.canvasSize, config.canvasSize);
+            const anglePerSection = (2 * Math.PI) / players.length;
+
+            // 각 참가자 섹션 그리기
+            players.forEach((player) => {
+                const startAngle = player.index * anglePerSection + currentRotation;
+                const endAngle = (player.index + 1) * anglePerSection + currentRotation;
+
+                // 섹션 배경 그리기
+                ctx.beginPath();
+                ctx.moveTo(config.centerX, config.centerY);
+                ctx.arc(config.centerX, config.centerY, config.radius, startAngle, endAngle);
+                ctx.closePath();
+                ctx.fillStyle = player.color;
+                ctx.fill();
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // 참가자 이름 텍스트 그리기
+                ctx.save();
+                ctx.translate(config.centerX, config.centerY);
+                ctx.rotate(startAngle + anglePerSection / 2);
+                ctx.textAlign = 'center';
+                ctx.fillStyle = '#fff';
+                ctx.font = `bold ${calculateFontSize()}px Arial`;
+                ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                ctx.shadowBlur = 2;
+                ctx.shadowOffsetX = 1;
+                ctx.shadowOffsetY = 1;
+
+                const displayText = getDisplayText(player.name);
+                ctx.fillText(displayText, config.radius * 0.6, 5);
+                ctx.restore();
+            });
+
+            drawCenterElements();
+        }
+
+        /**
+         * 중앙 원과 화살표 그리기
+         */
+        function drawCenterElements() {
+            if (!ctx || !mounted) return;
+
+            // 중앙 원 그리기
+            const centerCircleRadius = config.canvasSize * 0.05;
+            ctx.beginPath();
+            ctx.arc(config.centerX, config.centerY, centerCircleRadius, 0, 2 * Math.PI);
+            ctx.fillStyle = '#333';
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // 화살표 포인터 그리기
+            const arrowSize = config.canvasSize * 0.04;
+            const arrowY = config.canvasSize * 0.08;
+
+            ctx.beginPath();
+            ctx.moveTo(config.centerX - arrowSize, arrowY);
+            ctx.lineTo(config.centerX + arrowSize, arrowY);
+            ctx.lineTo(config.centerX, arrowY + arrowSize * 1.5);
+            ctx.closePath();
+            ctx.fillStyle = '#FF0000';
+            ctx.fill();
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        /**
+         * 현재 당첨자 판별 함수
+         * @returns {number | null}
+         */
+        function getCurrentWinner() {
+            if (players.length === 0) return null;
+
+            const anglePerSection = (2 * Math.PI) / players.length;
+            const pointerAngle = 1.5 * Math.PI; // 12시 방향
+
+            let normalizedRotation = currentRotation % (2 * Math.PI);
+            let effectiveAngle = pointerAngle - normalizedRotation;
+
+            if (effectiveAngle < 0) {
+                effectiveAngle += 2 * Math.PI;
+            }
+
+            const winnerIndex = Math.floor(effectiveAngle / anglePerSection);
+            return winnerIndex >= 0 && winnerIndex < players.length ? winnerIndex : null;
+        }
+
+        /**
+         * 애니메이션 설정 생성
+         * @param {number} targetIndex 
+         * @returns {AnimationConfig}
+         */
+        function createAnimationConfig(targetIndex) {
+            const anglePerSection = (2 * Math.PI) / players.length;
+            const targetSliceCenter = targetIndex * anglePerSection + anglePerSection / 2;
+            const baseTargetRotation = 1.5 * Math.PI - targetSliceCenter;
+            const randomOffset = (Math.random() - 0.5) * anglePerSection * 0.8;
+            const additionalRotations = 5 + Math.floor(Math.random() * 5);
+            const duration = DEFAULT_ANIMATION_DURATION + Math.random() * 1000;
+
+            return {
+                duration,
+                additionalRotations,
+                randomOffset: baseTargetRotation + randomOffset
+            };
+        }
+
+        /**
+         * 룰렛 스핀 애니메이션 함수
+         * @param {number | null} targetIndex 
+         */
+        function spinWheel(targetIndex = null) {
+            if (!mounted || isSpinning || players.length === 0) return;
+
+            isSpinning = true;
+            hideResult();
+            updateSpinButton(true);
+
+            // 목표 인덱스 결정
+            const finalTargetIndex = targetIndex !== null ? targetIndex : Math.floor(Math.random() * players.length);
+            const animConfig = createAnimationConfig(finalTargetIndex);
+
+            const startRotation = currentRotation;
+            const rotationsDone = Math.floor(startRotation / (2 * Math.PI));
+            const finalDestination = (rotationsDone + animConfig.additionalRotations) * (2 * Math.PI) + animConfig.randomOffset;
+
+            const totalRotationAmount = finalDestination - startRotation;
+            const startTime = Date.now();
+
+            console.log(`🎯 목표: ${players[finalTargetIndex]?.name} (index: ${finalTargetIndex})`);
+
+            /**
+             * 애니메이션 프레임 함수
+             */
+            function animate() {
+                if (!mounted) return;
+
+                const now = Date.now();
+                const elapsed = now - startTime;
+                const progress = Math.min(elapsed / animConfig.duration, 1);
+
+                // easeOutQuart 감속 효과
+                const easeProgress = 1 - Math.pow(1 - progress, 4);
+
+                currentRotation = startRotation + totalRotationAmount * easeProgress;
+                drawWheel();
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    finishSpin();
+                }
+            }
+
+            animate();
+        }
+
+        /**
+         * 스핀 완료 처리
+         */
+        function finishSpin() {
+            isSpinning = false;
+            updateSpinButton(false);
+
+            const winnerIndex = getCurrentWinner();
+
+            if (winnerIndex !== null && players[winnerIndex]) {
+                const winner = players[winnerIndex];
+                showResult(winner);
+                console.log(`🏆 당첨자: ${winner.name}`);
+            } else {
+                showResult({ name: 'Error', color: '#FF0000' });
+            }
+        }
+
+        /**
+         * 배열에서 랜덤 요소 선택
+         * @param {Array} array 
+         * @returns {*}
+         */
+        function getRandomElement(array) {
+            const randomIndex = Math.floor(Math.random() * array.length);
+            return array[randomIndex];
+        }
+
+        /**
+         * 일반 스핀 함수
+         */
+        function normalSpin() {
+            if (players.length === 0) {
+                alert('먼저 참가자를 입력하고 업데이트하세요.');
+                return;
+            }
+            spinWheel();
+        }
+
+        /**
+         * 조작된 스핀 함수
+         */
+        function riggedSpin() {
+            if (players.length === 0) {
+                alert('먼저 참가자를 입력하고 업데이트하세요.');
+                return;
+            }
+
+            // 조작 대상 중 실제 참가자만 필터링
+            const validNames = RIGGED_NAMES.filter((name) =>
+                players.some((player) => player.name === name)
+            );
+
+            if (validNames.length === 0) {
+                alert('조작 대상이 참가자 명단에 없습니다.');
+                return;
+            }
+
+            // 유효한 조작 대상 중에서 랜덤 선택
+            const selectedName = getRandomElement(validNames);
+            const targetPlayer = players.find((player) => player.name === selectedName);
+
+            if (targetPlayer) {
+                console.log(`🎲 조작 모드: ${targetPlayer.name} 선택`);
+                spinWheel(targetPlayer.index);
+            }
+        }
+
+        /**
+         * 스핀 핸들러들
+         */
+        function handleNormalSpin() {
+            if (!mounted) return;
+            normalSpin();
+        }
+
+        function handleRiggedSpin() {
+            if (!mounted) return;
+            riggedSpin();
+        }
+
+        /**
+         * 결과 표시 함수
+         * @param {Player} winner 
+         */
+        function showResult(winner) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = `🎉 당첨자: ${winner.name} 🎉`;
+            resultDiv.style.display = 'block';
+        }
+
+        /**
+         * 결과 숨기기
+         */
+        function hideResult() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'none';
+        }
+
+        /**
+         * 스핀 버튼 상태 업데이트
+         * @param {boolean} spinning 
+         */
+        function updateSpinButton(spinning) {
+            const spinButton = document.getElementById('spinButton');
+            if (spinning) {
+                spinButton.textContent = '🌀 돌리는 중...';
+                spinButton.disabled = true;
+            } else {
+                spinButton.textContent = '🎲 룰렛 돌리기';
+                spinButton.disabled = false;
+            }
+        }
+
+        /**
+         * 초기화 함수 (onMount 대체)
+         */
+        function init() {
+            canvas = document.getElementById('rouletteCanvas');
+            if (!canvas) {
+                console.error('Canvas 요소를 찾을 수 없습니다.');
+                return;
+            }
+
+            const context = canvas.getContext('2d');
+            if (!context) {
+                console.error('Canvas context를 가져올 수 없습니다.');
+                return;
+            }
+
+            ctx = context;
+            mounted = true;
+
+            // 입력 필드 생성
+            createInputFields();
+
+            // 초기 설정
+            updateCanvasSize();
+            updatePlayers();
+
+            // 리사이즈 이벤트 리스너 등록
+            window.addEventListener('resize', updateCanvasSize);
+
+            console.log('🎯 룰렛 게임이 초기화되었습니다!');
+        }
+
+        /**
+         * 정리 함수 (onDestroy 대체)
+         */
+        function cleanup() {
+            if (mounted) {
+                window.removeEventListener('resize', updateCanvasSize);
+            }
+            mounted = false;
+        }
+
+        // 키보드 단축키 이벤트
+        document.addEventListener('keydown', (e) => {
+            if (!mounted || isSpinning) return;
+
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                normalSpin();
+            }
+        });
+
+        // 페이지 로드 시 초기화
+        window.addEventListener('load', init);
+
+        // 페이지 언로드 시 정리
+        window.addEventListener('beforeunload', cleanup);
+
+        console.log('🎯 룰렛 게임 스크립트 로드 완료! Enter 또는 Space로 스핀 가능합니다.');
+    </script>
+</body>
+
+</html>
